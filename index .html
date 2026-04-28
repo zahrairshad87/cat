@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zahra & Rudra — Our Journal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Crimson+Pro:ital,wght@0,300;0,400;1,300;1,400&family=Dancing+Script:wght@400;600&display=swap" rel="stylesheet">
+<!-- Firebase CDN -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  // ── REPLACE WITH YOUR FIREBASE CONFIG ──
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db  = getFirestore(app);
+
+  // Expose helpers on window so the rest of the script can use them
+  window._db = db;
+  window._fsDoc = doc;
+  window._fsGetDoc = getDoc;
+  window._fsSetDoc = setDoc;
+  window._fsDeleteDoc = deleteDoc;
+  window._fsOnSnapshot = onSnapshot;
+  window._fsCollection = collection;
+  window._firebaseReady = true;
+  window.dispatchEvent(new Event("firebase-ready"));
+</script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: #1a0d0e;
+  min-height: 100vh;
+  font-family: 'Crimson Pro', Georgia, serif;
+  color: #3a1a1e;
+  overflow-x: hidden;
+}
+.app-wrap {
+  min-height: 100vh;
+  background: radial-gradient(ellipse at 20% 0%, #3d1520 0%, #1a0d0e 50%),
+              radial-gradient(ellipse at 80% 100%, #1a0d20 0%, transparent 60%);
+  position: relative;
+}
+.petal {
+  position: fixed;
+  pointer-events: none;
+  font-size: 18px;
+  opacity: 0;
+  animation: fall linear infinite;
+  z-index: 0;
+}
+@keyframes fall {
+  0% { transform: translateY(-40px) rotate(0deg); opacity: 0.6; }
+  100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+}
+.glass-card {
+  background: rgba(255,248,245,0.96);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  box-shadow: 0 8px 60px rgba(0,0,0,0.4), 0 1px 0 rgba(255,255,255,0.6) inset;
+  border: 1px solid rgba(255,200,180,0.3);
+}
+.main-container {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 20px 80px;
+  position: relative;
+  z-index: 1;
+}
+/* HEADER */
+.header { text-align: center; margin-bottom: 48px; }
+.header-eyebrow { font-family: 'Dancing Script', cursive; font-size: 18px; color: #c9687a; letter-spacing: 0.05em; margin-bottom: 8px; }
+.header-title { font-family: 'Cormorant Garamond', serif; font-size: clamp(48px,8vw,76px); font-weight: 300; color: #fff8f5; line-height: 1; letter-spacing: -0.02em; text-shadow: 0 2px 40px rgba(200,100,100,0.3); }
+.header-title em { font-style: italic; color: #f4a0b0; }
+.header-ampersand { font-family: 'Cormorant Garamond', serif; font-size: clamp(28px,5vw,44px); color: #c9687a; display: block; margin: 4px 0; }
+.header-sub { font-family: 'Crimson Pro', serif; font-style: italic; font-size: 16px; color: rgba(255,220,210,0.6); margin-top: 12px; letter-spacing: 0.04em; }
+.heart-divider { display: flex; align-items: center; gap: 12px; justify-content: center; margin: 20px 0; }
+.heart-divider::before, .heart-divider::after { content: ''; width: 60px; height: 1px; background: linear-gradient(to right, transparent, #c9687a); }
+.heart-divider::after { background: linear-gradient(to left, transparent, #c9687a); }
+/* TABS */
+.tabs { display: flex; gap: 8px; margin-bottom: 32px; padding: 6px; background: rgba(255,255,255,0.08); border-radius: 16px; border: 1px solid rgba(255,200,180,0.15); flex-wrap: wrap; }
+.tab-btn { flex: 1; min-width: 80px; padding: 12px 8px; border: none; border-radius: 12px; font-family: 'Cormorant Garamond', serif; font-size: 15px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; transition: all 0.3s ease; background: transparent; color: rgba(255,220,210,0.5); }
+.tab-btn.active { background: rgba(255,248,245,0.96); color: #3a1a1e; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+/* WRITE FORM */
+.write-form { padding: 36px; }
+.form-label { font-family: 'Cormorant Garamond', serif; font-size: 13px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #8a5060; margin-bottom: 10px; display: block; }
+.author-select { display: flex; gap: 10px; margin-bottom: 24px; }
+.author-btn { flex: 1; padding: 14px; border-radius: 14px; border: 2px solid #e8d0d4; background: white; font-family: 'Cormorant Garamond', serif; font-size: 17px; font-weight: 600; cursor: pointer; transition: all 0.25s; color: #8a5060; }
+.author-btn.selected { border-color: #e8446a; background: linear-gradient(135deg, #fff0f3, #ffe4ea); color: #c0304f; box-shadow: 0 4px 16px rgba(232,68,106,0.18); }
+.mood-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 24px; }
+.mood-chip { padding: 12px 8px; border-radius: 12px; border: 2px solid transparent; background: #faf4f5; cursor: pointer; text-align: center; transition: all 0.2s; font-size: 14px; font-family: 'Crimson Pro', serif; font-weight: 400; letter-spacing: 0.04em; color: #6a3a44; }
+.mood-chip .mood-em { font-size: 26px; display: block; margin-bottom: 5px; }
+.mood-chip:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.mood-chip.selected { border-color: var(--mood-color); background: var(--mood-bg); color: var(--mood-color); transform: translateY(-2px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+.entry-textarea { width: 100%; min-height: 160px; padding: 18px; border-radius: 16px; border: 2px solid #e8d0d4; font-family: 'Crimson Pro', serif; font-size: 18px; line-height: 1.7; color: #3a1a1e; resize: vertical; outline: none; transition: border-color 0.2s; background: #fffcfc; margin-bottom: 20px; }
+.entry-textarea:focus { border-color: #e8446a; }
+.entry-textarea::placeholder { color: #c0a0a8; font-style: italic; }
+.submit-btn { width: 100%; padding: 16px; border-radius: 16px; border: none; background: linear-gradient(135deg, #e8446a, #c0304f); color: white; font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 600; letter-spacing: 0.06em; cursor: pointer; transition: all 0.3s; box-shadow: 0 6px 24px rgba(200,50,80,0.35); }
+.submit-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 32px rgba(200,50,80,0.45); }
+.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+/* TOAST */
+.toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(80px); background: #3a1a1e; color: #fff0f3; padding: 14px 28px; border-radius: 50px; font-family: 'Crimson Pro', serif; font-size: 16px; font-style: italic; box-shadow: 0 8px 32px rgba(0,0,0,0.4); transition: transform 0.4s cubic-bezier(0.34,1.56,0.64,1); z-index: 999; white-space: nowrap; }
+.toast.show { transform: translateX(-50%) translateY(0); }
+/* ENTRIES */
+.entries-wrap { padding: 8px 0; }
+.entries-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+.filter-chip { padding: 6px 14px; border-radius: 50px; border: 1.5px solid rgba(255,200,180,0.25); background: rgba(255,255,255,0.07); color: rgba(255,220,210,0.6); font-family: 'Crimson Pro', serif; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+.filter-chip:hover { background: rgba(255,255,255,0.12); }
+.filter-chip.active { background: rgba(255,248,245,0.15); border-color: rgba(255,200,180,0.6); color: rgba(255,240,230,0.9); }
+.entry-card { padding: 28px 32px; margin-bottom: 18px; position: relative; overflow: hidden; animation: slideUp 0.5s ease both; }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.entry-mood-bar { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; border-radius: 24px 0 0 24px; background: var(--mood-color); }
+.entry-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 14px; gap: 12px; }
+.entry-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.entry-author { font-family: 'Dancing Script', cursive; font-size: 22px; color: #c0304f; }
+.entry-mood-badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 50px; font-size: 12px; font-family: 'Crimson Pro', serif; background: var(--mood-bg); color: var(--mood-color); border: 1px solid var(--mood-border); }
+.entry-date { font-family: 'Crimson Pro', serif; font-size: 12px; color: #b08090; font-style: italic; white-space: nowrap; }
+.entry-date-actions { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.delete-btn { background: none; border: none; cursor: pointer; color: #c0a0a8; font-size: 15px; padding: 2px 4px; border-radius: 6px; transition: all 0.2s; line-height: 1; opacity: 0; pointer-events: none; }
+.entry-card:hover .delete-btn { opacity: 1; pointer-events: auto; }
+.delete-btn:hover { color: #e8446a; background: rgba(232,68,106,0.1); }
+.delete-confirm { display: flex; align-items: center; gap: 6px; animation: slideUp 0.2s ease both; }
+.delete-confirm-text { font-family: 'Crimson Pro', serif; font-size: 13px; font-style: italic; color: #8a5060; }
+.delete-yes { padding: 3px 10px; border-radius: 50px; border: 1.5px solid #e8446a; background: transparent; color: #e8446a; font-family: 'Crimson Pro', serif; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+.delete-yes:hover { background: #e8446a; color: white; }
+.delete-no { padding: 3px 10px; border-radius: 50px; border: 1.5px solid #e8d0d4; background: transparent; color: #8a5060; font-family: 'Crimson Pro', serif; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+.delete-no:hover { background: #f5eeef; }
+.entry-body { font-family: 'Crimson Pro', serif; font-size: 19px; line-height: 1.75; color: #3a1a1e; white-space: pre-wrap; font-weight: 300; }
+.empty-state { text-align: center; padding: 60px 20px; color: rgba(255,220,210,0.4); font-family: 'Cormorant Garamond', serif; font-size: 22px; font-style: italic; white-space: pre-wrap; }
+.empty-state-emoji { font-size: 48px; display: block; margin-bottom: 16px; }
+.count-badge { font-family: 'Crimson Pro', serif; font-size: 13px; color: rgba(255,220,210,0.4); text-align: center; padding: 12px 0 0; font-style: italic; }
+/* THINKING OF YOU */
+.ping-banner { background: linear-gradient(135deg,rgba(255,240,245,0.97),rgba(255,228,238,0.97)); border: 1.5px solid rgba(232,68,106,0.25); border-radius: 20px; padding: 18px 24px; margin-bottom: 28px; display: flex; align-items: center; gap: 16px; box-shadow: 0 4px 32px rgba(200,50,80,0.12); animation: pingIn 0.6s cubic-bezier(0.34,1.56,0.64,1) both; }
+@keyframes pingIn { from { opacity: 0; transform: translateY(-12px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+.ping-heart { font-size: 32px; animation: heartbeat 1.6s ease-in-out infinite; flex-shrink: 0; }
+@keyframes heartbeat { 0%,100%{transform:scale(1)} 14%{transform:scale(1.18)} 28%{transform:scale(1)} 42%{transform:scale(1.12)} }
+.ping-text { flex: 1; }
+.ping-title { font-family: 'Dancing Script', cursive; font-size: 22px; color: #c0304f; line-height: 1.2; }
+.ping-sub { font-family: 'Crimson Pro', serif; font-size: 14px; font-style: italic; color: #b08090; margin-top: 2px; }
+.ping-dismiss { background: none; border: none; color: #c0a0a8; font-size: 16px; cursor: pointer; padding: 4px 6px; border-radius: 8px; transition: all 0.2s; flex-shrink: 0; line-height: 1; }
+.ping-dismiss:hover { color: #e8446a; background: rgba(232,68,106,0.08); }
+.ping-btn { width: 100%; margin-top: 14px; padding: 14px; border-radius: 16px; border: 2px solid rgba(232,68,106,0.3); background: linear-gradient(135deg,rgba(255,240,245,0.6),rgba(255,228,238,0.6)); color: #c0304f; font-family: 'Cormorant Garamond', serif; font-size: 17px; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; transition: all 0.3s; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.ping-btn:hover { border-color: rgba(232,68,106,0.6); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(200,50,80,0.15); }
+.ping-btn-heart { font-size: 20px; animation: heartbeat 1.6s ease-in-out infinite; }
+.ping-sent-msg { text-align: center; font-family: 'Crimson Pro', serif; font-size: 15px; font-style: italic; color: #c0304f; padding: 10px 0 0; animation: pingIn 0.4s ease both; }
+/* SECRET LETTERS */
+.letter-date-input { width: 100%; padding: 12px 16px; border-radius: 12px; border: 2px solid #e8d0d4; font-family: 'Crimson Pro', serif; font-size: 16px; color: #3a1a1e; background: #fffcfc; outline: none; transition: border-color 0.2s; margin-bottom: 20px; }
+.letter-date-input:focus { border-color: #e8446a; }
+.sealed-letter { background: linear-gradient(135deg,rgba(255,240,245,0.97),rgba(255,228,238,0.97)); border: 1.5px solid rgba(232,68,106,0.2); border-radius: 20px; padding: 28px 32px; margin-bottom: 18px; display: flex; align-items: center; gap: 20px; animation: slideUp 0.5s ease both; }
+.sealed-wax { font-size: 44px; flex-shrink: 0; animation: heartbeat 2.4s ease-in-out infinite; }
+.sealed-info { flex: 1; }
+.sealed-from { font-family: 'Dancing Script', cursive; font-size: 20px; color: #c0304f; margin-bottom: 4px; }
+.sealed-unlock { font-family: 'Crimson Pro', serif; font-size: 14px; font-style: italic; color: #b08090; }
+.sealed-lock { font-size: 22px; flex-shrink: 0; opacity: 0.5; }
+.opened-letter { background: linear-gradient(160deg,#fffaf8,#fff5f0); border: 1px solid rgba(232,68,106,0.15); border-radius: 20px; padding: 32px; margin-bottom: 18px; animation: letterOpen 0.7s cubic-bezier(0.34,1.56,0.64,1) both; }
+@keyframes letterOpen { from{opacity:0;transform:scale(0.95) translateY(10px)} to{opacity:1;transform:scale(1) translateY(0)} }
+.letter-seal-top { text-align: center; font-size: 32px; margin-bottom: 16px; }
+.letter-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 14px; border-bottom: 1px solid rgba(232,68,106,0.12); }
+.letter-from { font-family: 'Dancing Script', cursive; font-size: 22px; color: #c0304f; }
+.letter-opened-date { font-family: 'Crimson Pro', serif; font-size: 12px; font-style: italic; color: #b08090; }
+.letter-body { font-family: 'Crimson Pro', serif; font-size: 19px; line-height: 1.85; color: #3a1a1e; white-space: pre-wrap; font-weight: 300; }
+.letter-written-date { text-align: right; font-family: 'Crimson Pro', serif; font-size: 13px; font-style: italic; color: #c0a0a8; margin-top: 20px; }
+/* DAILY CHECK-IN */
+.checkin-card { padding: 28px 32px; margin-bottom: 32px; }
+.checkin-title { font-family: 'Cormorant Garamond', serif; font-size: 13px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #8a5060; margin-bottom: 20px; text-align: center; }
+.checkin-pair { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: center; margin-bottom: 20px; }
+.checkin-person { text-align: center; }
+.checkin-name { font-family: 'Dancing Script', cursive; font-size: 18px; color: #c0304f; margin-bottom: 8px; }
+.checkin-word-display { font-family: 'Cormorant Garamond', serif; font-size: 28px; font-style: italic; color: #3a1a1e; min-height: 40px; display: flex; align-items: center; justify-content: center; }
+.checkin-word-empty { font-size: 16px; color: #c0a0a8; font-style: italic; font-family: 'Crimson Pro', serif; }
+.checkin-heart { font-size: 22px; text-align: center; color: #e8446a; animation: heartbeat 2s ease-in-out infinite; }
+.checkin-input-row { display: flex; gap: 10px; align-items: center; margin-top: 20px; }
+.checkin-input { flex: 1; padding: 11px 16px; border-radius: 12px; border: 2px solid #e8d0d4; font-family: 'Cormorant Garamond', serif; font-size: 18px; font-style: italic; color: #3a1a1e; background: #fffcfc; outline: none; transition: border-color 0.2s; }
+.checkin-input:focus { border-color: #e8446a; }
+.checkin-input::placeholder { color: #c0a0a8; }
+.checkin-submit { padding: 11px 20px; border-radius: 12px; border: none; background: linear-gradient(135deg,#e8446a,#c0304f); color: white; font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.25s; white-space: nowrap; }
+.checkin-submit:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(200,50,80,0.3); }
+.checkin-submit:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
+.checkin-date { text-align: center; font-family: 'Crimson Pro', serif; font-size: 12px; font-style: italic; color: #c0a0a8; margin-top: 4px; }
+.checkin-done-msg { text-align: center; margin-top: 16px; font-family: 'Crimson Pro', serif; font-size: 15px; font-style: italic; color: #c0a0a8; }
+/* GOOD MORNING / GOOD NIGHT */
+.greeting-wrap { position: relative; border-radius: 28px; overflow: hidden; margin-bottom: 24px; padding: 36px 36px 28px; }
+.greeting-wrap.morning { background: linear-gradient(160deg,#fff8ee 0%,#ffecd6 60%,#ffd6b0 100%); border: 1px solid rgba(230,168,23,0.25); box-shadow: 0 8px 48px rgba(230,140,40,0.15); }
+.greeting-wrap.night { background: linear-gradient(160deg,#1a0d2e 0%,#2a1040 60%,#1a0820 100%); border: 1px solid rgba(150,100,200,0.25); box-shadow: 0 8px 48px rgba(80,40,120,0.3); }
+.greeting-sky { font-size: 48px; text-align: center; margin-bottom: 8px; animation: gentleFloat 4s ease-in-out infinite; }
+@keyframes gentleFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+.greeting-time-label { text-align: center; font-family: 'Cormorant Garamond', serif; font-size: 13px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 24px; }
+.greeting-wrap.morning .greeting-time-label { color: #b07020; }
+.greeting-wrap.night .greeting-time-label { color: rgba(200,170,255,0.6); }
+.greeting-latest { border-radius: 18px; padding: 20px 24px; margin-bottom: 20px; }
+.greeting-wrap.morning .greeting-latest { background: rgba(255,255,255,0.55); }
+.greeting-wrap.night .greeting-latest { background: rgba(255,255,255,0.06); }
+.greeting-latest-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.greeting-latest-author { font-family: 'Dancing Script', cursive; font-size: 20px; }
+.greeting-wrap.morning .greeting-latest-author { color: #c0304f; }
+.greeting-wrap.night .greeting-latest-author { color: #d4a8ff; }
+.greeting-latest-time { font-family: 'Crimson Pro', serif; font-size: 12px; font-style: italic; }
+.greeting-wrap.morning .greeting-latest-time { color: #b08060; }
+.greeting-wrap.night .greeting-latest-time { color: rgba(200,170,255,0.45); }
+.greeting-latest-msg { font-family: 'Crimson Pro', serif; font-size: 20px; line-height: 1.65; font-weight: 300; white-space: pre-wrap; }
+.greeting-wrap.morning .greeting-latest-msg { color: #3a1a00; }
+.greeting-wrap.night .greeting-latest-msg { color: rgba(240,220,255,0.88); }
+.greeting-compose { display: flex; flex-direction: column; gap: 10px; }
+.greeting-textarea { width: 100%; padding: 14px 18px; border-radius: 14px; font-family: 'Crimson Pro', serif; font-size: 17px; line-height: 1.6; resize: none; outline: none; transition: border-color 0.2s; background: rgba(255,255,255,0.7); border: 2px solid rgba(232,68,106,0.2); color: #3a1a1e; min-height: 80px; }
+.greeting-wrap.night .greeting-textarea { background: rgba(255,255,255,0.07); border-color: rgba(180,130,255,0.25); color: rgba(240,220,255,0.9); }
+.greeting-textarea::placeholder { color: #c0a0a8; font-style: italic; }
+.greeting-wrap.night .greeting-textarea::placeholder { color: rgba(180,140,220,0.45); }
+.greeting-textarea:focus { border-color: #e8446a; }
+.greeting-wrap.night .greeting-textarea:focus { border-color: rgba(200,150,255,0.6); }
+.greeting-send-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.greeting-author-toggle { display: flex; gap: 6px; }
+.greeting-author-btn { padding: 8px 14px; border-radius: 10px; border: 1.5px solid rgba(232,68,106,0.25); background: rgba(255,255,255,0.5); font-family: 'Cormorant Garamond', serif; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; color: #8a5060; }
+.greeting-author-btn.selected { border-color: #e8446a; background: rgba(232,68,106,0.1); color: #c0304f; }
+.greeting-wrap.night .greeting-author-btn { background: rgba(255,255,255,0.05); border-color: rgba(180,130,255,0.2); color: rgba(200,170,255,0.7); }
+.greeting-wrap.night .greeting-author-btn.selected { border-color: rgba(200,150,255,0.6); background: rgba(180,130,255,0.15); color: #d4a8ff; }
+.greeting-send-btn { margin-left: auto; padding: 10px 22px; border-radius: 12px; border: none; font-family: 'Cormorant Garamond', serif; font-size: 16px; font-weight: 600; cursor: pointer; transition: all 0.25s; letter-spacing: 0.04em; }
+.greeting-wrap.morning .greeting-send-btn { background: linear-gradient(135deg,#e8a020,#c07010); color: white; box-shadow: 0 4px 16px rgba(200,120,20,0.3); }
+.greeting-wrap.night .greeting-send-btn { background: linear-gradient(135deg,#7040c0,#4a2090); color: white; box-shadow: 0 4px 16px rgba(100,60,180,0.4); }
+.greeting-send-btn:hover { transform: translateY(-1px); filter: brightness(1.08); }
+.greeting-send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; filter: none; }
+.greeting-history { margin-top: 8px; display: flex; flex-direction: column; gap: 10px; }
+.greeting-history-item { border-radius: 14px; padding: 14px 18px; display: flex; gap: 12px; align-items: flex-start; }
+.greeting-wrap.morning .greeting-history-item { background: rgba(255,255,255,0.35); }
+.greeting-wrap.night .greeting-history-item { background: rgba(255,255,255,0.04); }
+.greeting-history-author { font-family: 'Dancing Script', cursive; font-size: 17px; flex-shrink: 0; min-width: 60px; }
+.greeting-wrap.morning .greeting-history-author { color: #c0304f; }
+.greeting-wrap.night .greeting-history-author { color: #c8a0f0; }
+.greeting-history-text { font-family: 'Crimson Pro', serif; font-size: 16px; line-height: 1.6; flex: 1; }
+.greeting-wrap.morning .greeting-history-text { color: #4a2a10; }
+.greeting-wrap.night .greeting-history-text { color: rgba(230,210,255,0.75); }
+.greeting-history-time { font-family: 'Crimson Pro', serif; font-size: 11px; font-style: italic; flex-shrink: 0; margin-top: 3px; }
+.greeting-wrap.morning .greeting-history-time { color: #c0a070; }
+.greeting-wrap.night .greeting-history-time { color: rgba(180,140,220,0.4); }
+.greeting-section-label { font-family: 'Cormorant Garamond', serif; font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; margin: 16px 0 8px; }
+.greeting-wrap.morning .greeting-section-label { color: #b08040; }
+.greeting-wrap.night .greeting-section-label { color: rgba(180,140,220,0.5); }
+.greeting-empty { text-align: center; font-family: 'Crimson Pro', serif; font-size: 18px; font-style: italic; padding: 16px 0 8px; }
+.tab-content { display: none; }
+.tab-content.active { display: block; }
+</style>
+</head>
+<body>
+<div class="app-wrap" id="app">
+  <!-- Petals injected by JS -->
+  <div class="main-container">
+    <div class="header">
+      <div class="header-eyebrow">our little world 🌹</div>
+      <div class="header-title">
+        <em>Zahra</em>
+        <span class="header-ampersand">& Rudra</span>
+      </div>
+      <div class="heart-divider">❤</div>
+      <div class="header-sub">every feeling, every word, forever ours</div>
+    </div>
+
+    <div id="ping-banner" class="ping-banner" style="display:none">
+      <span class="ping-heart">🌹</span>
+      <div class="ping-text">
+        <div class="ping-title" id="ping-title"></div>
+        <div class="ping-sub" id="ping-sub"></div>
+      </div>
+      <button class="ping-dismiss" onclick="dismissPing()">✕</button>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('write')">✍️ Write</button>
+      <button class="tab-btn" onclick="switchTab('read')" id="read-tab-btn">📖 Read (0)</button>
+      <button class="tab-btn" onclick="switchTab('letters')">💌 Letters</button>
+      <button class="tab-btn" onclick="switchTab('today')">🌤 Today</button>
+      <button class="tab-btn" onclick="switchTab('greetings')">🌅 Mornings</button>
+    </div>
+
+    <!-- WRITE TAB -->
+    <div id="tab-write" class="tab-content active">
+      <div class="glass-card write-form">
+        <label class="form-label">Who is writing?</label>
+        <div class="author-select" id="write-author-select">
+          <button class="author-btn selected" onclick="selectAuthor('Rudra','write')">🌿 Rudra</button>
+          <button class="author-btn" onclick="selectAuthor('Zahra','write')">🌹 Zahra</button>
+        </div>
+        <label class="form-label">What are you feeling?</label>
+        <div class="mood-grid" id="mood-grid"></div>
+        <label class="form-label">Pour your heart out</label>
+        <textarea class="entry-textarea" id="entry-text" placeholder="Tell Zahra what's on your heart..."></textarea>
+        <button class="submit-btn" id="submit-btn" onclick="handleSubmit()" disabled>Add to our journal 🌹</button>
+        <button class="ping-btn" onclick="sendPing()">
+          <span class="ping-btn-heart">🌹</span>
+          <span id="ping-btn-label">Let Zahra know you're thinking of her</span>
+        </button>
+        <div id="ping-sent-msg" class="ping-sent-msg" style="display:none">💫 they'll feel it when they open the journal</div>
+      </div>
+    </div>
+
+    <!-- READ TAB -->
+    <div id="tab-read" class="tab-content">
+      <div class="entries-wrap">
+        <div class="entries-filters" id="entries-filters"></div>
+        <div id="entries-list"></div>
+      </div>
+    </div>
+
+    <!-- LETTERS TAB -->
+    <div id="tab-letters" class="tab-content">
+      <div class="glass-card write-form" style="margin-bottom:24px">
+        <label class="form-label">Who is writing?</label>
+        <div class="author-select" id="letter-author-select">
+          <button class="author-btn selected" onclick="selectAuthor('Rudra','letter')">🌿 Rudra</button>
+          <button class="author-btn" onclick="selectAuthor('Zahra','letter')">🌹 Zahra</button>
+        </div>
+        <label class="form-label">Seal this letter until...</label>
+        <input type="date" class="letter-date-input" id="letter-date">
+        <label class="form-label">Your letter</label>
+        <textarea class="entry-textarea" id="letter-text" placeholder="Write to Zahra... she'll read this on the date you choose 💌" style="min-height:180px"></textarea>
+        <button class="submit-btn" id="letter-submit-btn" onclick="handleSaveLetter()" disabled>Seal this letter 💌</button>
+      </div>
+      <div id="letters-list"></div>
+    </div>
+
+    <!-- TODAY TAB -->
+    <div id="tab-today" class="tab-content">
+      <div class="glass-card checkin-card">
+        <div class="checkin-title">today, in one word</div>
+        <div class="checkin-pair">
+          <div class="checkin-person">
+            <div class="checkin-name">🌹 Zahra</div>
+            <div class="checkin-word-display" id="checkin-word-Zahra"><span class="checkin-word-empty">waiting...</span></div>
+          </div>
+          <div class="checkin-heart">❤</div>
+          <div class="checkin-person">
+            <div class="checkin-name">🌿 Rudra</div>
+            <div class="checkin-word-display" id="checkin-word-Rudra"><span class="checkin-word-empty">waiting...</span></div>
+          </div>
+        </div>
+        <div class="checkin-date" id="checkin-date-label"></div>
+        <div class="checkin-input-row" id="checkin-input-row">
+          <input class="checkin-input" id="checkin-input" maxlength="24" placeholder="Rudra, how are you today?" onkeydown="if(event.key==='Enter')handleCheckin()">
+          <button class="checkin-submit" id="checkin-submit-btn" onclick="handleCheckin()" disabled>Share</button>
+        </div>
+        <div id="checkin-done-msg" class="checkin-done-msg" style="display:none"></div>
+        <!-- Today author select -->
+        <div class="author-select" id="today-author-select" style="margin-top:16px">
+          <button class="author-btn selected" onclick="selectAuthor('Rudra','today')">🌿 Rudra</button>
+          <button class="author-btn" onclick="selectAuthor('Zahra','today')">🌹 Zahra</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GREETINGS TAB -->
+    <div id="tab-greetings" class="tab-content">
+      <div id="greeting-wrap" class="greeting-wrap morning">
+        <div class="greeting-sky" id="greeting-sky">🌅</div>
+        <div class="greeting-time-label" id="greeting-time-label">good morning</div>
+        <div id="greeting-latest-block" style="display:none" class="greeting-latest">
+          <div class="greeting-latest-meta">
+            <span class="greeting-latest-author" id="greeting-latest-author"></span>
+            <span class="greeting-latest-time" id="greeting-latest-time"></span>
+          </div>
+          <div class="greeting-latest-msg" id="greeting-latest-msg"></div>
+        </div>
+        <div class="greeting-compose">
+          <textarea class="greeting-textarea" id="greeting-textarea" rows="3" placeholder="Good morning, my love..."></textarea>
+          <div class="greeting-send-row">
+            <div class="greeting-author-toggle" id="greeting-author-toggle">
+              <button class="greeting-author-btn selected" onclick="selectAuthor('Rudra','greeting')">🌿 Rudra</button>
+              <button class="greeting-author-btn" onclick="selectAuthor('Zahra','greeting')">🌹 Zahra</button>
+            </div>
+            <button class="greeting-send-btn" id="greeting-send-btn" onclick="handleSendGreeting()">Send greeting 🌅</button>
+          </div>
+        </div>
+        <div id="greeting-history-section" style="display:none">
+          <div class="greeting-section-label">Earlier</div>
+          <div class="greeting-history" id="greeting-history-list"></div>
+        </div>
+        <div id="greeting-empty" class="greeting-empty" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">🌹 Added to your story, my love</div>
+</div>
+
+<script>
+const MOODS = [
+  { id:"love",     label:"Love",     emoji:"🌹", color:"#e8446a", bg:"#fff0f3", border:"#f9b8c8" },
+  { id:"happy",    label:"Happy",    emoji:"✨", color:"#e6a817", bg:"#fffbf0", border:"#fde68a" },
+  { id:"angry",    label:"Angry",    emoji:"🔥", color:"#d94f2b", bg:"#fff4f0", border:"#fbc9b8" },
+  { id:"sad",      label:"Sad",      emoji:"🌧", color:"#5b7ec9", bg:"#f0f4ff", border:"#b8cbf9" },
+  { id:"grateful", label:"Grateful", emoji:"🌸", color:"#b5547a", bg:"#fff0f8", border:"#f9c8e0" },
+  { id:"missing",  label:"Missing",  emoji:"🌙", color:"#6b5ba6", bg:"#f4f0ff", border:"#d4c8f9" },
+  { id:"excited",  label:"Excited",  emoji:"🎆", color:"#1da882", bg:"#f0fff9", border:"#b8f0e0" },
+  { id:"peaceful", label:"Peaceful", emoji:"🕊", color:"#5896a6", bg:"#f0f9ff", border:"#b8e0f0" },
+];
+
+// --- State ---
+let state = {
+  author: "Rudra",
+  mood: null,
+  entries: [],
+  letters: [],
+  checkins: { Rudra: null, Zahra: null },
+  greetings: [],
+  ping: null,
+  confirmDelete: null,
+  filterMood: "all",
+  filterAuthor: "all",
+  currentTab: "write",
+};
+
+// --- Firebase Firestore helpers ---
+function _db() { return window._db; }
+
+async function storageGet(key) {
+  try {
+    const ref = window._fsDoc(_db(), "journal", key);
+    const snap = await window._fsGetDoc(ref);
+    return snap.exists() ? snap.data().value : null;
+  } catch(_) { return null; }
+}
+
+async function storageSet(key, val) {
+  try {
+    const ref = window._fsDoc(_db(), "journal", key);
+    await window._fsSetDoc(ref, { value: val });
+  } catch(_) {}
+}
+
+async function storageDelete(key) {
+  try {
+    const ref = window._fsDoc(_db(), "journal", key);
+    await window._fsDeleteDoc(ref);
+  } catch(_) {}
+}
+
+// Generic real-time listener factory — shared by all features
+function listenDoc(key, callback) {
+  try {
+    const ref = window._fsDoc(_db(), "journal", key);
+    return window._fsOnSnapshot(ref, (snap) => {
+      callback(snap.exists() ? snap.data().value : null);
+    });
+  } catch(_) { return () => {}; }
+}
+
+// --- Entries ---
+function saveEntries(entries) { return storageSet("journal_entries", entries); }
+async function loadEntries()  { return storageGet("journal_entries"); }
+function listenEntries(cb)    { return listenDoc("journal_entries", cb); }
+
+// --- Letters ---
+function saveLetters(letters) { return storageSet("journal_letters", letters); }
+function listenLetters(cb)    { return listenDoc("journal_letters", cb); }
+
+// --- Check-ins ---
+function saveCheckins(data)   { return storageSet("journal_checkins", data); }
+function listenCheckins(cb)   { return listenDoc("journal_checkins", cb); }
+
+// --- Greetings ---
+function saveGreetings(list)  { return storageSet("journal_greetings", list); }
+function listenGreetings(cb)  { return listenDoc("journal_greetings", cb); }
+
+// --- Ping ---
+function savePing(p)          { return storageSet("journal_ping", p); }
+function deletePing()         { return storageDelete("journal_ping"); }
+function listenPing(cb)       { return listenDoc("journal_ping", cb); }
+
+// --- Formatting ---
+function formatDate(ts) {
+  const d = new Date(ts);
+  return d.toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"}) + " · " + d.toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
+}
+function esc(s) {
+  return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+// --- Tabs ---
+function switchTab(name) {
+  document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(el => el.classList.remove("active"));
+  document.getElementById("tab-" + name).classList.add("active");
+  const btns = document.querySelectorAll(".tab-btn");
+  const idx = ["write","read","letters","today","greetings"].indexOf(name);
+  if (btns[idx]) btns[idx].classList.add("active");
+  state.currentTab = name;
+  if (name === "read") renderEntries();
+  if (name === "letters") renderLetters();
+  if (name === "today") renderCheckins();
+  if (name === "greetings") renderGreetings();
+}
+
+// --- Author select ---
+function selectAuthor(a, context) {
+  state.author = a;
+  const selectors = {
+    write: "write-author-select", letter: "letter-author-select",
+    today: "today-author-select", greeting: "greeting-author-toggle"
+  };
+  const id = selectors[context];
+  if (!id) return;
+  document.querySelectorAll(`#${id} .author-btn, #${id} .greeting-author-btn`).forEach((btn, i) => {
+    const names = ["Rudra","Zahra"];
+    btn.classList.toggle("selected", names[i] === a);
+  });
+  // Update placeholders & labels
+  const isRudra = a === "Rudra";
+  const ta = document.getElementById("entry-text");
+  if (ta) ta.placeholder = isRudra ? "Tell Zahra what's on your heart..." : "Tell Rudra what's on your heart...";
+  const lt = document.getElementById("letter-text");
+  if (lt) lt.placeholder = isRudra ? "Write to Zahra... she'll read this on the date you choose 💌" : "Write to Rudra... he'll read this on the date you choose 💌";
+  const pl = document.getElementById("ping-btn-label");
+  if (pl) pl.textContent = isRudra ? "Let Zahra know you're thinking of her" : "Let Rudra know you're thinking of him";
+  const ci = document.getElementById("checkin-input");
+  if (ci) ci.placeholder = `${a}, how are you today?`;
+  renderCheckins();
+  updateGreetingUI();
+  validateSubmit();
+  validateLetterSubmit();
+}
+
+// --- Mood grid ---
+function renderMoodGrid() {
+  const grid = document.getElementById("mood-grid");
+  grid.innerHTML = MOODS.map(m => `
+    <button class="mood-chip${state.mood === m.id ? " selected" : ""}"
+      style="--mood-color:${m.color};--mood-bg:${m.bg};--mood-border:${m.border}"
+      onclick="selectMood('${m.id}')">
+      <span class="mood-em">${m.emoji}</span>${m.label}
+    </button>`).join("");
+}
+function selectMood(id) {
+  state.mood = id;
+  renderMoodGrid();
+  validateSubmit();
+}
+
+// --- Validation ---
+function validateSubmit() {
+  const t = document.getElementById("entry-text");
+  const btn = document.getElementById("submit-btn");
+  if (btn) btn.disabled = !(t?.value.trim() && state.mood);
+}
+function validateLetterSubmit() {
+  const t = document.getElementById("letter-text");
+  const d = document.getElementById("letter-date");
+  const btn = document.getElementById("letter-submit-btn");
+  if (btn) btn.disabled = !(t?.value.trim() && d?.value);
+}
+
+// --- Toast ---
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  if (msg) t.textContent = msg;
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2500);
+}
+
+// --- Submit entry ---
+async function handleSubmit() {
+  const t = document.getElementById("entry-text");
+  if (!t.value.trim() || !state.mood) return;
+  document.getElementById("submit-btn").disabled = true;
+  document.getElementById("submit-btn").textContent = "Saving...";
+  const entry = { id: Date.now(), author: state.author, mood: state.mood, text: t.value.trim(), ts: Date.now() };
+  state.entries = [entry, ...state.entries];
+  await saveEntries(state.entries);
+  t.value = "";
+  state.mood = null;
+  renderMoodGrid();
+  updateReadCount();
+  showToast("🌹 Added to your story, my love");
+  document.getElementById("submit-btn").textContent = "Add to our journal 🌹";
+  validateSubmit();
+  switchTab("read");
+}
+
+// --- Delete entry ---
+async function confirmDelete(id) {
+  state.confirmDelete = id;
+  renderEntries();
+}
+function cancelDelete() {
+  state.confirmDelete = null;
+  renderEntries();
+}
+async function handleDelete(id) {
+  state.entries = state.entries.filter(e => e.id !== id);
+  await saveEntries(state.entries);
+  state.confirmDelete = null;
+  updateReadCount();
+  renderEntries();
+}
+
+// --- Render entries ---
+function updateReadCount() {
+  const btn = document.getElementById("read-tab-btn");
+  if (btn) btn.textContent = `📖 Read (${state.entries.length})`;
+}
+function renderEntries() {
+  const filtersEl = document.getElementById("entries-filters");
+  const listEl = document.getElementById("entries-list");
+  // Filters
+  const authorFilters = [
+    { val:"all", label:"All" },
+    { val:"Rudra", label:"🌿 Rudra" },
+    { val:"Zahra", label:"🌹 Zahra" },
+    ...MOODS.slice(0,4).map(m => ({ val:"mood_"+m.id, label:`${m.emoji} ${m.label}`, isMood:true, moodId:m.id }))
+  ];
+  filtersEl.innerHTML = authorFilters.map(f => {
+    const isActive = f.isMood
+      ? state.filterMood === f.moodId
+      : state.filterAuthor === f.val && !f.isMood && (f.val === "all" ? state.filterMood === "all" || true : true);
+    const active = f.isMood ? state.filterMood === f.moodId : state.filterAuthor === f.val;
+    return `<button class="filter-chip${active?" active":""}" onclick="setFilter('${f.isMood?"mood":"author"}','${f.isMood?f.moodId:f.val}')">${f.label}</button>`;
+  }).join("");
+
+  const filtered = state.entries.filter(e => {
+    if (state.filterMood !== "all" && e.mood !== state.filterMood) return false;
+    if (state.filterAuthor !== "all" && e.author !== state.filterAuthor) return false;
+    return true;
+  });
+
+  if (state.entries.length === 0) {
+    listEl.innerHTML = `<div class="empty-state"><span class="empty-state-emoji">🌹</span>Your story hasn't been written yet.\nBe the first to pour your heart out.</div>`;
+    return;
+  }
+  if (filtered.length === 0) {
+    listEl.innerHTML = `<div class="empty-state"><span class="empty-state-emoji">🌹</span>No entries match this filter.</div>`;
+    return;
+  }
+  listEl.innerHTML = filtered.map((e, i) => {
+    const m = MOODS.find(x => x.id === e.mood) || MOODS[0];
+    const isConfirm = state.confirmDelete === e.id;
+    const dateActions = isConfirm
+      ? `<div class="delete-confirm">
+           <span class="delete-confirm-text">remove this?</span>
+           <button class="delete-yes" onclick="handleDelete(${e.id})">yes</button>
+           <button class="delete-no" onclick="cancelDelete()">no</button>
+         </div>`
+      : `<div class="entry-date">${formatDate(e.ts)}</div>
+         <button class="delete-btn" title="Delete entry" onclick="confirmDelete(${e.id})">✕</button>`;
+    return `
+      <div class="glass-card entry-card" style="--mood-color:${m.color};--mood-bg:${m.bg};--mood-border:${m.border};animation-delay:${i*0.06}s">
+        <div class="entry-mood-bar"></div>
+        <div class="entry-header">
+          <div class="entry-meta">
+            <span class="entry-author">${e.author === "Rudra" ? "🌿 " : "🌹 "}${esc(e.author)}</span>
+            <span class="entry-mood-badge">${m.emoji} ${m.label}</span>
+          </div>
+          <div class="entry-date-actions">${dateActions}</div>
+        </div>
+        <div class="entry-body">${esc(e.text)}</div>
+      </div>`;
+  }).join("") + `<div class="count-badge">${filtered.length} memories in this journal</div>`;
+}
+function setFilter(type, val) {
+  if (type === "mood") {
+    state.filterMood = state.filterMood === val ? "all" : val;
+  } else {
+    state.filterAuthor = val;
+  }
+  renderEntries();
+}
+
+// --- Ping ---
+async function sendPing() {
+  const p = { from: state.author, ts: Date.now() };
+  await savePing(p);
+  const msg = document.getElementById("ping-sent-msg");
+  msg.style.display = "block";
+  setTimeout(() => msg.style.display = "none", 3000);
+}
+async function dismissPing() {
+  state.ping = null;
+  document.getElementById("ping-banner").style.display = "none";
+  await deletePing();
+}
+// checkPing replaced by real-time listenPing listener in init()
+
+// --- Letters ---
+async function handleSaveLetter() {
+  const t = document.getElementById("letter-text");
+  const d = document.getElementById("letter-date");
+  if (!t.value.trim() || !d.value) return;
+  const btn = document.getElementById("letter-submit-btn");
+  btn.disabled = true; btn.textContent = "Sealing...";
+  const letter = { id: Date.now(), author: state.author, text: t.value.trim(), unlockDate: d.value, ts: Date.now() };
+  state.letters = [letter, ...state.letters];
+  await saveLetters(state.letters);
+  t.value = ""; d.value = "";
+  btn.textContent = "Seal this letter 💌";
+  validateLetterSubmit();
+  showToast("💌 Letter sealed");
+  renderLetters();
+}
+function renderLetters() {
+  const el = document.getElementById("letters-list");
+  if (state.letters.length === 0) {
+    el.innerHTML = `<div class="empty-state"><span class="empty-state-emoji">💌</span>No sealed letters yet. Write one for the future.</div>`;
+    return;
+  }
+  el.innerHTML = state.letters.map((l, i) => {
+    const unlock = new Date(l.unlockDate);
+    const isOpen = new Date() >= unlock;
+    const unlockFmt = unlock.toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"});
+    if (isOpen) {
+      return `<div class="glass-card opened-letter" style="animation-delay:${i*0.07}s">
+        <div class="letter-seal-top">💌</div>
+        <div class="letter-header">
+          <div class="letter-from">${l.author==="Rudra"?"🌿 ":"🌹 "}${esc(l.author)}</div>
+          <div class="letter-opened-date">Opened ${unlockFmt}</div>
+        </div>
+        <div class="letter-body">${esc(l.text)}</div>
+        <div class="letter-written-date">Written on ${new Date(l.ts).toLocaleDateString("en-IN",{day:"numeric",month:"long",year:"numeric"})}</div>
+      </div>`;
+    } else {
+      return `<div class="sealed-letter" style="animation-delay:${i*0.07}s">
+        <div class="sealed-wax">🪭</div>
+        <div class="sealed-info">
+          <div class="sealed-from">A letter from ${l.author==="Rudra"?"🌿 Rudra":"🌹 Zahra"}</div>
+          <div class="sealed-unlock">Opens on ${unlockFmt}</div>
+        </div>
+        <div class="sealed-lock">🔒</div>
+      </div>`;
+    }
+  }).join("");
+}
+
+// --- Check-ins ---
+async function handleCheckin() {
+  const input = document.getElementById("checkin-input");
+  const word = input.value.replace(/\s/g,"");
+  if (!word) return;
+  const btn = document.getElementById("checkin-submit-btn");
+  btn.disabled = true; btn.textContent = "...";
+  const today = new Date().toDateString();
+  const updated = { date: today, words: { ...state.checkins, [state.author]: word } };
+  state.checkins = updated.words;
+  await saveCheckins(updated);
+  input.value = "";
+  btn.textContent = "Share";
+  renderCheckins();
+}
+// loadCheckins replaced by real-time listenCheckins listener in init()
+function renderCheckins() {
+  const rWord = state.checkins.Rudra;
+  const zWord = state.checkins.Zahra;
+  document.getElementById("checkin-word-Rudra").innerHTML = rWord
+    ? `<em>${esc(rWord)}</em>` : `<span class="checkin-word-empty">waiting...</span>`;
+  document.getElementById("checkin-word-Zahra").innerHTML = zWord
+    ? `<em>${esc(zWord)}</em>` : `<span class="checkin-word-empty">waiting...</span>`;
+  document.getElementById("checkin-date-label").textContent = new Date().toLocaleDateString("en-IN",{weekday:"long",day:"numeric",month:"long"});
+  const myWord = state.checkins[state.author];
+  const row = document.getElementById("checkin-input-row");
+  const doneMsg = document.getElementById("checkin-done-msg");
+  const input = document.getElementById("checkin-input");
+  if (myWord) {
+    row.style.display = "none";
+    doneMsg.style.display = "block";
+    doneMsg.innerHTML = `you said <em style="color:#c0304f">${esc(myWord)}</em> today 🌹`;
+  } else {
+    row.style.display = "flex";
+    doneMsg.style.display = "none";
+    if (input) {
+      input.placeholder = `${state.author}, how are you today?`;
+      input.oninput = () => {
+        document.getElementById("checkin-submit-btn").disabled = !input.value.trim();
+      };
+    }
+  }
+}
+
+// --- Greetings ---
+function updateGreetingUI() {
+  const hour = new Date().getHours();
+  const isNight = hour < 5 || hour >= 20;
+  const isMorning = hour >= 5 && hour < 13;
+  const wrap = document.getElementById("greeting-wrap");
+  wrap.className = "greeting-wrap " + (isNight ? "night" : "morning");
+  document.getElementById("greeting-sky").textContent = isNight ? "🌙" : isMorning ? "🌅" : "☀️";
+  document.getElementById("greeting-time-label").textContent = isNight ? "good night" : isMorning ? "good morning" : "good afternoon";
+  const isRudra = state.author === "Rudra";
+  document.getElementById("greeting-textarea").placeholder = isRudra
+    ? (isNight ? "Dream of me, Zahra..." : "Good morning, my love...")
+    : (isNight ? "Sleep well, Rudra..." : "Good morning, my love...");
+  const sendBtn = document.getElementById("greeting-send-btn");
+  sendBtn.textContent = isNight ? "Send goodnight 🌙" : "Send greeting 🌅";
+}
+async function handleSendGreeting() {
+  const ta = document.getElementById("greeting-textarea");
+  if (!ta.value.trim()) return;
+  const btn = document.getElementById("greeting-send-btn");
+  btn.disabled = true; btn.textContent = "Sending...";
+  const hour = new Date().getHours();
+  const kind = hour>=5&&hour<13 ? "morning" : hour>=13&&hour<20 ? "afternoon" : "night";
+  const g = { id: Date.now(), author: state.author, text: ta.value.trim(), kind, ts: Date.now() };
+  state.greetings = [g, ...state.greetings].slice(0,40);
+  await saveGreetings(state.greetings);
+  ta.value = "";
+  btn.disabled = false;
+  updateGreetingUI();
+  renderGreetings();
+}
+// loadGreetings replaced by real-time listenGreetings listener in init()
+function renderGreetings() {
+  updateGreetingUI();
+  const latest = state.greetings[0];
+  const latestBlock = document.getElementById("greeting-latest-block");
+  if (latest) {
+    latestBlock.style.display = "block";
+    document.getElementById("greeting-latest-author").textContent = (latest.author==="Rudra"?"🌿 ":"🌹 ") + latest.author;
+    document.getElementById("greeting-latest-time").textContent = formatDate(latest.ts);
+    document.getElementById("greeting-latest-msg").textContent = latest.text;
+  } else {
+    latestBlock.style.display = "none";
+  }
+  const history = state.greetings.slice(1,6);
+  const histSection = document.getElementById("greeting-history-section");
+  const histList = document.getElementById("greeting-history-list");
+  if (history.length > 0) {
+    histSection.style.display = "block";
+    histList.innerHTML = history.map(g => `
+      <div class="greeting-history-item">
+        <div class="greeting-history-author">${g.author==="Rudra"?"🌿":"🌹"} ${esc(g.author)}</div>
+        <div class="greeting-history-text">${esc(g.text)}</div>
+        <div class="greeting-history-time">${formatDate(g.ts)}</div>
+      </div>`).join("");
+  } else {
+    histSection.style.display = "none";
+  }
+  const emptyEl = document.getElementById("greeting-empty");
+  const hour = new Date().getHours();
+  const isNight = hour < 5 || hour >= 20;
+  if (state.greetings.length === 0) {
+    emptyEl.style.display = "block";
+    emptyEl.style.color = isNight ? "rgba(200,170,255,0.4)" : "rgba(160,100,40,0.5)";
+    emptyEl.textContent = `Send your first ${isNight?"goodnight":"good morning"} 🌹`;
+  } else {
+    emptyEl.style.display = "none";
+  }
+}
+
+// --- Petals ---
+function initPetals() {
+  const emojis = ["🌹","🌸","✨","🌺","💫"];
+  for (let i = 0; i < 8; i++) {
+    const el = document.createElement("span");
+    el.className = "petal";
+    el.textContent = emojis[i % emojis.length];
+    el.style.left = `${10 + i * 12}%`;
+    el.style.animationDelay = `${i * 1.4}s`;
+    el.style.animationDuration = `${8 + i * 1.5}s`;
+    document.getElementById("app").appendChild(el);
+  }
+}
+
+// --- Init ---
+async function init() {
+  // Wait for Firebase module to be ready before doing anything
+  await new Promise(resolve => {
+    if (window._firebaseReady) return resolve();
+    window.addEventListener("firebase-ready", resolve, { once: true });
+    setTimeout(resolve, 5000); // fallback
+  });
+
+  initPetals();
+  renderMoodGrid();
+
+  document.getElementById("letter-date").min = new Date().toISOString().split("T")[0];
+
+  document.getElementById("entry-text").addEventListener("input", validateSubmit);
+  document.getElementById("letter-text").addEventListener("input", validateLetterSubmit);
+  document.getElementById("letter-date").addEventListener("change", validateLetterSubmit);
+  document.getElementById("greeting-textarea").addEventListener("input", () => {
+    document.getElementById("greeting-send-btn").disabled = !document.getElementById("greeting-textarea").value.trim();
+  });
+
+  // ── Real-time listener: Entries ──
+  listenEntries((entries) => {
+    if (!Array.isArray(entries)) return;
+    state.entries = entries;
+    updateReadCount();
+    if (state.currentTab === "read") renderEntries();
+  });
+
+  // ── Real-time listener: Letters ──
+  listenLetters((letters) => {
+    if (!Array.isArray(letters)) return;
+    state.letters = letters;
+    if (state.currentTab === "letters") renderLetters();
+  });
+
+  // ── Real-time listener: Check-ins ──
+  listenCheckins((data) => {
+    if (!data) return;
+    const today = new Date().toDateString();
+    state.checkins = data.date === today
+      ? (data.words || { Rudra: null, Zahra: null })
+      : { Rudra: null, Zahra: null };
+    if (state.currentTab === "today") renderCheckins();
+  });
+
+  // ── Real-time listener: Greetings ──
+  listenGreetings((list) => {
+    if (!Array.isArray(list)) return;
+    state.greetings = list;
+    if (state.currentTab === "greetings") renderGreetings();
+  });
+
+  // ── Real-time listener: Ping ──
+  listenPing((p) => {
+    if (p && Date.now() - p.ts < 86400000 && p.from !== state.author) {
+      state.ping = p;
+      document.getElementById("ping-banner").style.display = "flex";
+      document.getElementById("ping-title").textContent = p.from + " is thinking of you";
+      document.getElementById("ping-sub").textContent = formatDate(p.ts);
+    } else if (!p) {
+      // Ping was deleted (dismissed by the other person)
+      document.getElementById("ping-banner").style.display = "none";
+    }
+  });
+
+  updateReadCount();
+  updateGreetingUI();
+  renderCheckins();
+}
+
+init();
+</script>
+</body>
+</html>
